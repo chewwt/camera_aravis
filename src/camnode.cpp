@@ -565,7 +565,11 @@ static void NewBuffer_callback (ArvStream *pStream, ApplicationData *pApplicatio
 			msg.header.frame_id = global.config.frame_id;
 			msg.width = global.widthRoi;
 			msg.height = global.heightRoi;
-			msg.encoding = global.pszPixelformat;
+			// hackjob
+			if (strcmp(global.pszPixelformat,"bayerrg8")==0)
+				msg.encoding = "bayer_rggb8";
+			else
+				msg.encoding = global.pszPixelformat;
 			msg.step = msg.width * global.nBytesPixel;
 			msg.data = this_data;
 
@@ -826,6 +830,8 @@ int main(int argc, char** argv)
 {
     char   		*pszGuid = NULL;
     char    	 szGuid[512];
+    std::string          cameraInfoUrl = "";
+    std::string          cameraName = "";
     int			 nInterfaces = 0;
     int			 nDevices = 0;
     int 		 i = 0;
@@ -878,6 +884,18 @@ int main(int argc, char** argv)
     		else
     			pszGuid = NULL;
     	}
+
+        if (global.phNode->hasParam(ros::this_node::getName()+"/camera_info_url"))
+        {
+            global.phNode->getParam(ros::this_node::getName()+"/camera_info_url", cameraInfoUrl);
+        }
+ 
+        if (global.phNode->hasParam(ros::this_node::getName()+"/camera_name"))
+        {
+            global.phNode->getParam(ros::this_node::getName()+"/camera_name", cameraName);
+        }
+        else  
+            global.phNode->getParam(ros::this_node::getName()+"/guid", cameraName);
     	
     	// Open the camera, and set it up.
     	ROS_INFO("Opening: %s", pszGuid ? pszGuid : "(any)");
@@ -1006,7 +1024,7 @@ int main(int argc, char** argv)
 #endif
     	
 		// Start the camerainfo manager.
-		global.pCameraInfoManager = new camera_info_manager::CameraInfoManager(ros::NodeHandle(ros::this_node::getName()), arv_device_get_string_feature_value (global.pDevice, "DeviceID"));
+		global.pCameraInfoManager = new camera_info_manager::CameraInfoManager(ros::NodeHandle(ros::this_node::getName()), cameraName, cameraInfoUrl);
 
 		// Start the dynamic_reconfigure server.
 		dynamic_reconfigure::Server<Config> 				reconfigureServer;
